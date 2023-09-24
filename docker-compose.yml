@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  # Express Server
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: auth-service:latest
+    container_name: auth-service
+    ports:
+      - '${PORT}:${PORT}'
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://root:${POSTGRES_ROOT_PASSWORD}@postgres:3307/${POSTGRES_DATABASE}
+      PORT: 4040
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    command: ['dumb-init', 'node', 'dist/index.js']
+
+  # Postgres Database
+  postgres:
+    image: postgres:8.0
+    container_name: postgres
+    volumes:
+      - db-data:/var/lib/postgres
+    ports:
+      - '3307:3306'
+    environment:
+      # ! dont use root user in prod
+      POSTGRES_ROOT_PASSWORD: ${POSTGRES_ROOT_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD}
+    env_file:
+      - ./.env
+    restart: always
+volumes:
+  db-data:
