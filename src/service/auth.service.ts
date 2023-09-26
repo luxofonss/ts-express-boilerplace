@@ -1,5 +1,6 @@
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
+import { omit } from 'lodash';
 import prismaClient from '../config/prisma';
 import {
   BadRequestError,
@@ -13,7 +14,8 @@ import config from '../config/config';
 import {
   createAccessToken,
   createRefreshToken
-} from 'src/utils/generateTokens.utils';
+} from '../utils/generateTokens.utils';
+import { sendVerifyEmail } from './email.service';
 
 class AuthService {
   signUp = async (
@@ -58,9 +60,9 @@ class AuthService {
     console.log('token::', token);
 
     // Send an email with the verification link
-    //     sendVerifyEmail(email, token);
+    sendVerifyEmail(email, token);
 
-    return newUser;
+    return omit(newUser, 'password');
   };
 
   signIn = async (
@@ -83,9 +85,9 @@ class AuthService {
     if (!user) throw new NotFoundError('User not found');
 
     // check if email is verified
-    if (!user.emailVerified) {
-      throw new UnauthorizedError('Email is not verified');
-    }
+    // if (!user.emailVerified) {
+    //   throw new UnauthorizedError('Email is not verified');
+    // }
 
     // check password
     if (await argon2.verify(user.password, password)) {
@@ -94,6 +96,9 @@ class AuthService {
       // if the token does not belong to the current user, then we delete all refresh tokens
       // of the user stored in the db to be on the safe site
       // we also clear the cookie in both cases
+
+      const accessToken = createAccessToken(user.id);
+      const newRefreshToken = createRefreshToken(user.id);
 
       if (cookies?.[config.jwt.refresh_token.cookie_name]) {
         // check if given refresh token is from the curent user
@@ -119,10 +124,6 @@ class AuthService {
           });
         }
 
-        const accessToken = createAccessToken(user.id);
-
-        const newRefreshToken = createRefreshToken(user.id);
-
         // store new refresh token in db
         await prismaClient.refreshToken.create({
           data: {
@@ -131,8 +132,26 @@ class AuthService {
           }
         });
       }
+      return {
+        accessToken,
+        refreshToken: newRefreshToken
+      };
+    } else {
+      throw new UnauthorizedError('Password is incorrect');
     }
   };
+
+  /**
+   * This function handles the logout process for users. It expects a request object with the following properties:
+   *
+   * @param {TypedRequest} req - The request object that includes a cookie with a valid refresh token
+   * @param {Response} res - The response object that will be used to send the HTTP response.
+   *
+   * @returns {Response} Returns an HTTP response that includes one of the following:
+   *   - A 204 NO CONTENT status code if the refresh token cookie is undefined
+   *   - A 204 NO CONTENT status code if the refresh token does not exists in the database
+   *   - A 204 NO CONTENT status code if the refresh token cookie is successfully cleared
+   */
 }
 
 export default new AuthService();

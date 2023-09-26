@@ -1,10 +1,11 @@
-import type { Request, Response } from 'express';
+import type { ErrorRequestHandler } from 'express';
 import logger from './logger';
 
-export const errorHandler = (
-  err: Error,
-  _req: Request,
-  res: Response
+export const errorHandler: ErrorRequestHandler = (
+  err,
+  _req,
+  res,
+  _next
 ): void => {
   logger.error(err);
 

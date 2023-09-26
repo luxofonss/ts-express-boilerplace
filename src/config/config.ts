@@ -6,8 +6,6 @@ dotenv.config({
   path: path.resolve(__dirname, '../../.env')
 });
 
-console.log('nodeenv:: ', process.env.NODE_ENV);
-
 const envSchema = Joi.object().keys({
   NODE_ENV: Joi.string().required(),
   PORT: Joi.string().default('8080'),
@@ -52,11 +50,11 @@ const config = {
   jwt: {
     access_token: {
       secret: validatedEnv.ACCESS_TOKEN_SECRET,
-      expire: validatedEnv.ACCESS_TOKEN_EXPIRE
+      expire: validatedEnv.ACCESS_TOKEN_EXPIRED
     },
     refresh_token: {
       secret: validatedEnv.REFRESH_TOKEN_SECRET,
-      expire: validatedEnv.REFRESH_TOKEN_EXPIRE,
+      expire: validatedEnv.REFRESH_TOKEN_EXPIRED,
       cookie_name: validatedEnv.REFRESH_TOKEN_COOKIE_NAME
     }
   },

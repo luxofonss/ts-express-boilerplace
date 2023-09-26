@@ -1,0 +1,67 @@
+openapi: '3.0.2'
+info:
+  title: API Title
+  version: '1.0'
+servers:
+  - url: http://localhost:8080/v1/api
+tags:
+  - name: auth
+    description: Authentication
+    externalDocs:
+      description: Find out more
+      url: http://swagger.io
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+  /auth/signup:
+    post:
+      tags:
+        - auth
+      summary: Register new account
+      description: Register new account
+      operationId: signUp
+      requestBody:
+        description: Sign up user's info
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        '200':
+          description: Sign up successfully!
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
+        '405':
+          description: Invalid input
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - username
+        - password
+        - email
+      properties:
+        username:
+          type: string
+          example: user
+        password:
+          type: string
+          example: password
+        email:
+          type: string
+          example: example@gmail.com

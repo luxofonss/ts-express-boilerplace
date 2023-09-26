@@ -38,7 +38,7 @@ app.use(
   })
 );
 
-app.use('/api/v1', appRouter);
+app.use('/v1/api', appRouter);
 
 app.use(errorHandler);
 

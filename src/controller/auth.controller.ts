@@ -23,15 +23,15 @@ import authService from '../service/auth.service';
  */
 
 class AuthController {
-  signup = asyncHandler(
+  signUp = asyncHandler(
     async (req: TypedRequest<UserSignUpCredentials>, res: Response) => {
       OK(res, 'Sign up successfully!', await authService.signUp(req.body));
     }
   );
 
-  signin = asyncHandler(
+  signIn = asyncHandler(
     async (req: TypedRequest<UserLoginCredentials>, res: Response) => {
-      const cookies = req.cookies;
+      const cookies: string = req.cookies;
       OK(
         res,
         'Sign in successfully!',
