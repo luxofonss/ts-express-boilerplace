@@ -1,5 +1,6 @@
 import Joi from 'joi';
 import type {
+  EmailRequestBody,
   UserLoginCredentials,
   UserSignUpCredentials
 } from '../types/types';
@@ -16,5 +17,11 @@ export const signInSchema = {
   body: Joi.object<UserLoginCredentials>().keys({
     email: Joi.string().required().email(),
     password: Joi.string().required().min(6)
+  })
+};
+
+export const emailVerfifySchema = {
+  body: Joi.object<EmailRequestBody>().keys({
+    email: Joi.string().required().email()
   })
 };

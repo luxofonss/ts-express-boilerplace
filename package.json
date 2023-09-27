@@ -17,7 +17,7 @@
     "test:watch": "jest -i --watchAll",
     "coverage": "jest -i --coverage",
     "prepare": "husky install",
-    "db:generate": "prisma generate --schema=./src/database/prisma/schema.prisma"
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma"
   },
   "keywords": [],
   "author": "",

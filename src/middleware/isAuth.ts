@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { NextFunction, Request, Response } from 'express';
-import httpStatus from 'http-status';
 
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import config from '../config/config';
-import { ForbiddenError, UnauthorizedError } from 'src/core/error.response';
+import { ForbiddenError, UnauthorizedError } from '../core/error.response';
 
 // Why does 'jsonwebtoken' not support es6 module support ?????
 // Maybe in future this will be added.....

@@ -15,7 +15,7 @@ import {
   createAccessToken,
   createRefreshToken
 } from '../utils/generateTokens.utils';
-import { sendVerifyEmail } from './email.service';
+import emailService from './email.service';
 
 class AuthService {
   signUp = async (
@@ -60,7 +60,7 @@ class AuthService {
     console.log('token::', token);
 
     // Send an email with the verification link
-    sendVerifyEmail(email, token);
+    emailService.sendVerifyEmail(email, token);
 
     return omit(newUser, 'password');
   };
