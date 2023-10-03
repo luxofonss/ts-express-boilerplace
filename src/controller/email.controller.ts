@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import { OK } from '../core/success.response';
 import type { EmailRequestBody, TypedRequest } from './../types/types';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import emailService from '../service/email.service';
 
 class EmailController {
@@ -14,6 +14,14 @@ class EmailController {
       );
     }
   );
+
+  handleVerifyEmail = asyncHandler(async (req: Request, res: Response) => {
+    OK(
+      res,
+      'Verify successfully!',
+      await emailService.handleVerifyEmail(req.params['token'])
+    );
+  });
 }
 
 export default new EmailController();

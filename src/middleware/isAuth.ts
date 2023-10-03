@@ -16,9 +16,9 @@ const { verify } = jwt;
 const isAuth = (req: Request, res: Response, next: NextFunction): void => {
   // token looks like 'Bearer vnjaknvijdaknvikbnvreiudfnvriengviewjkdsbnvierj'
 
-  const authHeader = req.headers?.authorization;
+  const authHeader: string = req.headers?.authorization ?? '';
 
-  if (!authHeader || authHeader?.startsWith('Bearer ')) {
+  if (!authHeader?.startsWith('Bearer ')) {
     throw new UnauthorizedError('No token, authorization denied');
   }
 
@@ -31,8 +31,10 @@ const isAuth = (req: Request, res: Response, next: NextFunction): void => {
     config.jwt.access_token.secret,
     (err: unknown, payload: JwtPayload) => {
       if (err) throw new ForbiddenError('Invalid token'); // invalid token
-      req.payload = payload;
+      req.user = payload;
       next();
     }
   );
 };
+
+export default isAuth;

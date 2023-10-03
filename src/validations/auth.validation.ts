@@ -20,8 +20,14 @@ export const signInSchema = {
   })
 };
 
-export const emailVerfifySchema = {
+export const emailVerifySchema = {
   body: Joi.object<EmailRequestBody>().keys({
     email: Joi.string().required().email()
+  })
+};
+
+export const decodePayload = {
+  body: Joi.object().keys({
+    password: Joi.string().required()
   })
 };

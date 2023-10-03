@@ -33,15 +33,6 @@ export type ExpressMiddleware<
   next: NextFunction
 ) => Promise<void> | void;
 
-// Example usage from Stackoverflow:
-// type Req = { email: string; password: string };
-
-// type Res = { message: string };
-
-// export const signupUser: ExpressMiddleware<Req, Res> = async (req, res) => {
-//   /* strongly typed `req.body`. yay autocomplete 🎉 */
-//   res.json({ message: 'you have signed up' }) // strongly typed response obj
-// };
 export interface UserSignUpCredentials {
   username: string;
   email: string;
@@ -51,6 +42,10 @@ export interface UserSignUpCredentials {
 export type UserLoginCredentials = Omit<UserSignUpCredentials, 'username'>;
 
 export interface EmailRequestBody {
+  email: string;
+}
+
+export interface VerifyTokenParams {
   email: string;
 }
 
@@ -69,3 +64,11 @@ export type Sanitized<T> = T extends (...args: unknown[]) => unknown
 export type SanitizeOptions = IFilterXSSOptions & {
   whiteList?: IFilterXSSOptions['whiteList'];
 };
+
+export enum ACTION {
+  MANAGE = 'manage',
+  CREATE = 'create',
+  READ = 'read',
+  UPDATE = 'update',
+  DELETE = 'delete'
+}

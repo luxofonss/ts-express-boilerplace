@@ -7,19 +7,39 @@ datasource db {
      url      = env("DATABASE_URL")
 }
 
+enum Role {
+     USER
+     ADMIN
+     MANAGER
+     FRONTEND
+     BACKEND
+     DEVOPS
+     DESIGNER
+     QA
+     MARKETING
+     SALES
+     HR
+     FINANCE
+     EXECUTIVE
+     MONETIZATION
+     GAME_DESIGN
+     CTO
+     CEO
+}
+
 model Account {
      id                String   @id @default(cuid())
      userId            String
      type              String
      provider          String
      providerAccountId String
-     refresh_token     String?  @db.Text
-     access_token      String   @db.Text
+     refreshToken      String?  @db.Text
+     accessToken       String   @db.Text
      expiresAt         DateTime
-     token_type        String
+     tokenType         String
      scope             String
-     id_token          String?  @db.Text
-     session_state     String?
+     idToken           String?  @db.Text
+     sessionState      String?
 
      user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -33,10 +53,13 @@ model User {
      password               String
      emailVerified          DateTime?
      createdAt              DateTime                 @default(now())
+     role                   Role                     @default(USER)
      accounts               Account[]
      refreshTokens          RefreshToken[]
      resetToken             ResetToken[]
      emailVerificationToken EmailVerificationToken[]
+     KeyPair                KeyPair[]
+     Document               Document[]
 }
 
 model RefreshToken {
@@ -56,6 +79,15 @@ model ResetToken {
      createdAt DateTime @default(now())
 }
 
+model KeyPair {
+     id                  String   @id @default(cuid())
+     encryptedPrivateKey String   @unique
+     publicKey           String   @unique
+     user                User     @relation(fields: [userId], references: [id])
+     userId              String
+     createdAt           DateTime @default(now())
+}
+
 model EmailVerificationToken {
      id        String   @id @default(cuid())
      token     String   @unique
@@ -63,4 +95,14 @@ model EmailVerificationToken {
      user      User     @relation(fields: [userId], references: [id])
      userId    String
      createdAt DateTime @default(now())
+}
+
+model Document {
+     id        String   @id @default(cuid())
+     name      String
+     content   String
+     user      User     @relation(fields: [userId], references: [id])
+     userId    String
+     createdAt DateTime @default(now())
+     updatedAt DateTime @updatedAt
 }

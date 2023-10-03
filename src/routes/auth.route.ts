@@ -1,14 +1,14 @@
 import { Router } from 'express';
+import authLimiter from '..//middleware/authLimiter';
+import config from '../config/config';
+import authController from '../controller/auth.controller';
 import validate from '../middleware/validate';
 import {
-  emailVerfifySchema,
+  decodePayload,
   signInSchema,
   signUpSchema
 } from '../validations/auth.validation';
-import authController from '../controller/auth.controller';
-import config from '../config/config';
-import authLimiter from '..//middleware/authLimiter';
-import emailController from '../controller/email.controller';
+import isAuth from '../middleware/isAuth';
 
 const authRouter = Router();
 
@@ -18,10 +18,14 @@ if (config.node_env === 'production') {
 
 authRouter.post('/sign-in', validate(signInSchema), authController.signIn);
 authRouter.post('/sign-up', validate(signUpSchema), authController.signUp);
+
+/** routes that need authorization */
+authRouter.use(isAuth);
+
 authRouter.post(
-  '/verify-email',
-  validate(emailVerfifySchema),
-  emailController.sendVerifyEmail
+  '/decode-key',
+  validate(decodePayload),
+  authController.decodePrivateKey
 );
 
 export default authRouter;

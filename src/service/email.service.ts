@@ -1,15 +1,17 @@
 import { randomUUID } from 'crypto';
-import logger from '../middleware/logger';
-import transporter from '../config/nodemailer';
+import EmailRepo from '../database/repository/email.repo';
+import type { EmailRequestBody } from 'src/types/types';
+import type { _DeepPartialObject } from 'utility-types/dist/mapped-types';
 import config from '../config/config';
+import transporter from '../config/nodemailer';
 import {
   BadRequestError,
   ConflictError,
+  NotFoundError,
   UnauthorizedError
 } from '../core/error.response';
-import prismaClient from '../config/prisma';
-import type { EmailRequestBody } from 'src/types/types';
-import type { _DeepPartialObject } from 'utility-types/dist/mapped-types';
+import UserRepo from '../database/repository/user.repo';
+import logger from '../middleware/logger';
 
 class EmailService {
   /**
@@ -19,7 +21,7 @@ class EmailService {
    * @param {string} token - The reset password token
    */
   sendResetEmail = (email: string, token: string) => {
-    const resetLink = `${config.server.url}/api/v1/reset-password/${token}`;
+    const resetLink = `${config.server.url}/v1/api/reset-password/${token}`;
     const mailOptions = {
       from: config.email.from,
       to: email,
@@ -43,7 +45,7 @@ class EmailService {
    * @param {string} token - The email verification token
    */
   sendVerifyEmail = (email: string, token: string) => {
-    const verifyLink = `${config.server.url}/api/v1/verify-email/${token}`;
+    const verifyLink = `${config.server.url}/api/v1/email/verify-email/${token}`;
     const mailOptions = {
       from: config.email.from,
       to: email,
@@ -59,6 +61,11 @@ class EmailService {
     });
   };
 
+  /**
+   * This function triggers to re-send an email to the given email with the email verification link
+   *
+   * @param {object} body = {email} - The email of the user who wants to verify his/her email
+   */
   sendVerificationEmail = async (
     body: _DeepPartialObject<EmailRequestBody>
   ) => {
@@ -69,8 +76,8 @@ class EmailService {
     }
 
     // Check if the email is exists in the database
-    const user = await prismaClient.user.findUnique({
-      where: { email },
+    const user = await UserRepo.findUserByEmail({
+      email,
       select: { id: true, emailVerified: true }
     });
 
@@ -84,27 +91,53 @@ class EmailService {
     }
 
     // check if there is an existing verification token and delete it
-    await prismaClient.emailVerificationToken.deleteMany({
-      where: {
-        user: { id: user.id }
-      }
-    });
+    await EmailRepo.deleteManyEmailTokens(user.id);
 
     // generate a new verification token and save it to the database
     const token = randomUUID();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // token expires in 1 hour
-    await prismaClient.emailVerificationToken.create({
-      data: {
-        token,
-        expiresAt,
-        userId: user.id
-      }
+
+    await EmailRepo.createEmailToken({
+      token,
+      expiresAt,
+      userId: user.id
     });
 
     // send the verification email
     this.sendVerifyEmail(email, token);
 
     return { message: 'Verification email sent' };
+  };
+
+  /**
+   * This function triggers to re-send an email to the given email with the email verification link
+   *
+   * @param {object} body = {email} - The email of the user who wants to verify his/her email
+   */
+  handleVerifyEmail = async (token: string | undefined) => {
+    if (!token) throw new NotFoundError('Token is required');
+
+    const verificationToken = await EmailRepo.findEmailTokenByToken(token);
+
+    if (!verificationToken) {
+      throw new NotFoundError('Token is not exists');
+    }
+
+    /** If token has expired */
+    if (verificationToken.expiresAt < new Date()) {
+      await EmailRepo.deleteEmailTokenByToken(token);
+      throw new UnauthorizedError('Token is expired');
+    }
+
+    /** Update the user's email verification */
+    await UserRepo.updateUserById(verificationToken.userId, {
+      emailVerified: new Date()
+    });
+
+    /** Remove verify tokens that the user owns from the database */
+    await EmailRepo.deleteManyEmailTokens(verificationToken.userId);
+
+    return { message: 'Email verified' };
   };
 }
 

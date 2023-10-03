@@ -8,6 +8,11 @@ export const errorHandler: ErrorRequestHandler = (
   _next
 ): void => {
   logger.error(err);
+  const statusCode = err.status || 500;
 
-  res.status(500).json({ message: err.message });
+  res.status(statusCode).json({
+    status: statusCode,
+    message: err.message || 'Internal server error',
+    errors: err.errors
+  });
 };

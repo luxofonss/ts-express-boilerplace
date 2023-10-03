@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type {
   TypedRequest,
   UserLoginCredentials,
@@ -15,11 +15,7 @@ import authService from '../service/auth.service';
  * @param {TypedRequest<UserSignUpCredentials>} req - The request object that includes user's username, email, and password.
  * @param {Response} res - The response object that will be used to send the HTTP response.
  *
- * @returns {Response} Returns an HTTP response that includes one of the following:
- *   - A 400 BAD REQUEST status code and an error message if the request body is missing any required parameters.
- *   - A 409 CONFLICT status code if the user email already exists in the database.
- *   - A 201 CREATED status code and a success message if the new user is successfully created and a verification email is sent.
- *   - A 500 INTERNAL SERVER ERROR status code if there is an error in the server.
+ * @returns {Response} Returns an HTTP response
  */
 
 class AuthController {
@@ -39,6 +35,14 @@ class AuthController {
       );
     }
   );
+
+  decodePrivateKey = asyncHandler(async (req: Request, res: Response) => {
+    OK(
+      res,
+      'Decode successfully!',
+      await authService.decodePrivateKey({ body: req.body, user: req.user })
+    );
+  });
 }
 
 export default new AuthController();

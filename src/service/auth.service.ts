@@ -1,21 +1,31 @@
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import { omit } from 'lodash';
-import prismaClient from '../config/prisma';
-import {
-  BadRequestError,
-  ConflictError,
-  NotFoundError,
-  UnauthorizedError
-} from '../core/error.response';
 import type { UserSignUpCredentials } from 'src/types/types';
 import type { _DeepPartialObject } from 'utility-types/dist/mapped-types';
 import config from '../config/config';
+import {
+  BadRequestError,
+  ConflictError,
+  InternalServerError,
+  NotFoundError,
+  UnauthorizedError
+} from '../core/error.response';
+import UserRepo from '../database/repository/user.repo';
+import RefreshTokenRepo from '../database/repository/refreshToken.repo';
 import {
   createAccessToken,
   createRefreshToken
 } from '../utils/generateTokens.utils';
 import emailService from './email.service';
+import emailRepo from '../database/repository/email.repo';
+import generateRSAKeyPair from '../utils/generateKeyPair.util';
+import {
+  decryptKeyByPassword,
+  encryptKeyByPassword
+} from '../utils/privateKey.util';
+import KeyPairRepo from '../database/repository/keyPair.repo';
+import type { JwtPayload } from 'jsonwebtoken';
 
 class AuthService {
   signUp = async (
@@ -28,38 +38,47 @@ class AuthService {
       throw new NotFoundError('Username, email and password are required');
     }
 
-    const checkUserEmail = await prismaClient.user.findUnique({
-      where: {
-        email
-      }
-    });
+    const checkUserEmail = await UserRepo.findUserByEmail({ email });
 
     if (checkUserEmail) throw new ConflictError('Email has alreadly used'); // email is already in db
 
     const hashedPassword = await argon2.hash(password);
 
-    const newUser = await prismaClient.user.create({
-      data: {
-        name: username,
-        email,
-        password: hashedPassword
-      }
+    const newUser = await UserRepo.createUser({
+      name: username,
+      email,
+      password: hashedPassword
     });
 
+    if (!newUser) {
+      throw new InternalServerError('User not created');
+    }
     const token = randomUUID();
     const expiresAt = new Date(Date.now() + 3600000); // Token expires in 1 hour
 
-    await prismaClient.emailVerificationToken.create({
-      data: {
-        token,
-        expiresAt,
-        userId: newUser.id
-      }
+    /** Generate RSA key pair */
+    const keyPair: { privateKey: string; publicKey: string } =
+      generateRSAKeyPair();
+
+    /** Encrypt private key */
+    const encryptedPrivateKey = encryptKeyByPassword(
+      keyPair.privateKey,
+      password
+    );
+
+    await KeyPairRepo.createKeyPair({
+      encryptedPrivateKey,
+      publicKey: keyPair.publicKey,
+      userId: newUser.id
+    });
+    /** Save verify token in database */
+    await emailRepo.createEmailToken({
+      token,
+      expiresAt,
+      userId: newUser.id
     });
 
-    console.log('token::', token);
-
-    // Send an email with the verification link
+    /** Send an email with the verification link */
     emailService.sendVerifyEmail(email, token);
 
     return omit(newUser, 'password');
@@ -76,18 +95,21 @@ class AuthService {
       throw new BadRequestError('Email and password are required');
     }
 
-    const user = await prismaClient.user.findUnique({
-      where: {
-        email
+    const user = await UserRepo.findUserByEmail({
+      email,
+      select: {
+        id: true,
+        emailVerified: true,
+        password: true
       }
     });
 
     if (!user) throw new NotFoundError('User not found');
 
     // check if email is verified
-    // if (!user.emailVerified) {
-    //   throw new UnauthorizedError('Email is not verified');
-    // }
+    if (!user.emailVerified) {
+      throw new UnauthorizedError('Email is not verified');
+    }
 
     // check password
     if (await argon2.verify(user.password, password)) {
@@ -102,34 +124,25 @@ class AuthService {
 
       if (cookies?.[config.jwt.refresh_token.cookie_name]) {
         // check if given refresh token is from the curent user
-        const checkRefreshToken = await prismaClient.refreshToken.findUnique({
-          where: { token: cookies[config.jwt.refresh_token.cookie_name] }
-        });
+        const checkRefreshToken = await RefreshTokenRepo.findOneRefreshToken(
+          cookies[config.jwt.refresh_token.cookie_name]
+        );
 
         // if this token does not exists int the database or belongs to another user,
         // then we clear all refresh tokens from the user in the db
 
         if (!checkRefreshToken || checkRefreshToken.userId !== user.id) {
-          await prismaClient.refreshToken.deleteMany({
-            where: {
-              userId: user.id
-            }
-          });
+          await RefreshTokenRepo.deleteManyRefreshToken(user.id);
         } else {
-          // else everything is fine and we just need to delete the one token
-          await prismaClient.refreshToken.delete({
-            where: {
-              token: cookies[config.jwt.refresh_token.cookie_name]
-            }
-          });
+          await RefreshTokenRepo.deleteOneRefreshToken(
+            cookies[config.jwt.refresh_token.cookie_name]
+          );
         }
 
         // store new refresh token in db
-        await prismaClient.refreshToken.create({
-          data: {
-            token: newRefreshToken,
-            userId: user.id
-          }
+        await RefreshTokenRepo.createRefreshToken({
+          token: newRefreshToken,
+          userId: user.id
         });
       }
       return {
@@ -141,17 +154,26 @@ class AuthService {
     }
   };
 
-  /**
-   * This function handles the logout process for users. It expects a request object with the following properties:
-   *
-   * @param {TypedRequest} req - The request object that includes a cookie with a valid refresh token
-   * @param {Response} res - The response object that will be used to send the HTTP response.
-   *
-   * @returns {Response} Returns an HTTP response that includes one of the following:
-   *   - A 204 NO CONTENT status code if the refresh token cookie is undefined
-   *   - A 204 NO CONTENT status code if the refresh token does not exists in the database
-   *   - A 204 NO CONTENT status code if the refresh token cookie is successfully cleared
-   */
+  decodePrivateKey = async ({
+    body,
+    user
+  }: {
+    body: { password: string | undefined };
+    user: JwtPayload | undefined;
+  }) => {
+    const { password } = body;
+
+    if (!password) throw new BadRequestError('Password is required');
+    if (!user) throw new InternalServerError('User not found');
+
+    const keyPair = await KeyPairRepo.getKeyPairByUserId(user.id);
+    if (!keyPair) throw new NotFoundError('Key pair not found');
+    const privateKey = decryptKeyByPassword(
+      keyPair.encryptedPrivateKey,
+      password
+    );
+    return { privateKey };
+  };
 }
 
 export default new AuthService();
