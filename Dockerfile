@@ -4,8 +4,8 @@ FROM node:18-alpine3.16 AS build
 # Set the working directory to /app
 WORKDIR /app
 
-# Copy package.json and yarn.lock to the container
-COPY package.json yarn.lock ./
+# Copy package.json and package.lock to the container
+COPY package.json package.lock.json ./
 
 # Install development dependencies
 RUN apk add --no-cache --virtual .build-deps \
@@ -20,7 +20,7 @@ RUN apk add --no-cache --virtual .build-deps \
 COPY . .
 
 # Build the application
-RUN yarn build
+RUN npm run build
 
 # Run stage
 FROM node:18-alpine3.16 AS run
@@ -28,8 +28,8 @@ FROM node:18-alpine3.16 AS run
 # Set the working directory to /app
 WORKDIR /app
 
-# Copy package.json and yarn.lock to the container
-COPY package.json yarn.lock ./
+# Copy package.json package.lock.json to the container
+COPY package.json package.lock.json ./
 
 # Install dumb-init
 RUN apk add --no-cache dumb-init

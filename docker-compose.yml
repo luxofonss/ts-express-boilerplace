@@ -2,12 +2,12 @@ version: '3.9'
 
 services:
   # Express Server
-  auth-service:
+  ts-base:
     build:
       context: .
       dockerfile: Dockerfile
-    image: auth-service:latest
-    container_name: auth-service
+    image: ts-base:latest
+    container_name: ts-base
     ports:
       - '${PORT}:${PORT}'
     env_file:
