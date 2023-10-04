@@ -12,7 +12,7 @@ RUN apk add --no-cache --virtual .build-deps \
      gcc \
      g++ \
      python3 \
-     && npm install \
+     && npm ci --production=false \
      && apk del .build-deps \
      && npm cache clean --force
 
