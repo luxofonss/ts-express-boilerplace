@@ -38,6 +38,7 @@ app.use(
   })
 );
 
+// routes
 app.use('/v1/api', appRouter);
 
 app.use(errorHandler);
