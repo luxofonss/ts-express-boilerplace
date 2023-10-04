@@ -39,6 +39,7 @@
     "express-rate-limit": "^7.0.1",
     "helmet": "^7.0.0",
     "http-status": "^1.7.0",
+    "is-ci": "^3.0.1",
     "joi": "^17.10.2",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
