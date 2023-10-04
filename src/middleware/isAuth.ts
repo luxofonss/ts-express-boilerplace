@@ -13,7 +13,7 @@ import { ForbiddenError, UnauthorizedError } from '../core/error.response';
 
 const { verify } = jwt;
 
-const isAuth = (req: Request, res: Response, next: NextFunction): void => {
+const isAuth = (req: Request, _res: Response, next: NextFunction): void => {
   // token looks like 'Bearer vnjaknvijdaknvikbnvreiudfnvriengviewjkdsbnvierj'
 
   const authHeader: string = req.headers?.authorization ?? '';
