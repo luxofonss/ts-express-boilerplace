@@ -19,7 +19,7 @@
     "test": "jest",
     "test:watch": "jest -i --watchAll",
     "coverage": "jest -i --coverage",
-    "prepare": "husky install",
+    "prepare": "is-ci || husky install",
     "db:generate": "prisma generate --schema=./prisma/schema.prisma"
   },
   "keywords": [],
