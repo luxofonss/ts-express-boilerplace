@@ -12,9 +12,9 @@ RUN apk add --no-cache --virtual .build-deps \
      gcc \
      g++ \
      python3 \
-     && yarn install --frozen-lockfile --production=false \
+     && npm install \
      && apk del .build-deps \
-     && yarn cache clean
+     && npm cache clean --force
 
 # Copy the rest of the application code to the container
 COPY . .
@@ -43,7 +43,7 @@ RUN addgroup -g 1001 -S nodejs \
 USER nodejs
 
 # Install production dependencies
-RUN yarn install --frozen-lockfile --production=true && yarn cache clean
+RUN npm install --production
 
 # Copy the built application code from the build stage
 COPY --chown=nodejs:nodejs --from=build /app/dist ./dist
@@ -55,10 +55,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Generate prisma client
-RUN yarn prisma generate
+RUN npx prisma generate
 
 # Expose port for the application to listen on
 EXPOSE 4040
 
 # Start the application with dumb-init
-CMD ["dumb-init", "node", "dist/index.js"]
+CMD ["dumb-init", "npm", "start"]
